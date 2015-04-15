@@ -58,8 +58,38 @@ def get_cpu_revision():
 
 
 PIN_LAYOUT = {
-
+    # http://www.element14.com/community/docs/DOC-73950
+    # /l/raspberry-pi-2-model-b-gpio-40-pin-block-pinout
+    'Rpi2_B_UK_1024': [
+        # 1            2
+        '3V3',         '5V',
+        'GPIO02',      '5V',
+        'GPIO03',      'GND',
+        'GPIO04',      'GPIO14',
+        'GND',         'GPIO15',
+        # 11           12
+        'GPIO17',      'GPIO18',
+        'GPIO27',      'GND',
+        'GPIO22',      'GPIO23',
+        '3V3',         'GPIO24',
+        'GPIO10',      'GND',
+        # 21           22
+        'GPIO09',      'GPIO25',
+        'GPIO11',      'GPIO08',
+        'GND',         'GPIO07',
+        'ID_SD',       'ID_SC',
+        'GPIO05',      'GND',
+        # 31           32
+        'GPIO06',      'GPIO12',
+        'GPIO13',      'GND',
+        'GPIO19',      'GPIO16',
+        'GPIO26',      'GPIO20',
+        'GND',         'GPIO21',
+    ]
 }
+
+# aliases:
+PIN_LAYOUT['Rpi2_B_China_1024'] = PIN_LAYOUT['Rpi2_B_UK_1024']
 
 
 def exiterror(message, status=1):
@@ -187,11 +217,45 @@ def main():
                   'Please report this issue to {}'
                   .format(pi_rev, HOME_URL))
 
-    run_gui(pi_rev)
+    # FIXME: somehow, restore \n -> \r\n after curses exists
+    curses.wrapper(run_gui, pi_rev)
 
 
-def run_gui(pi_rev):
-    pass
+def run_gui(scr, pi_rev):
+    # turn off cursor
+    curses.curs_set(0)
+    pwin = scr
+
+    layout = PIN_LAYOUT[pi_rev]
+
+    # the pin-layout window
+    label_width = max(len(n) for n in layout)
+
+    # label format left and right
+    lfmt = ('{:>%d}' % label_width,
+            '{:<%d}' % label_width)
+    pfmt = '{:2}'
+
+    for pin, name in enumerate(layout):
+        row = pin // 2
+        col = pin % 2
+
+        # row:
+        #   lw
+        # **lw** XX XX **lw**
+
+        label = lfmt[col].format(layout[pin])
+        pwin.addstr(row, col * (label_width + 7), label)
+
+        # draw pin:
+        num = pfmt.format(pin)
+        pwin.addstr(row, label_width + 1 + col * 3, num)
+
+    pwin.refresh()
+
+    # busy work for now
+    while True:
+        pass
 
 
 if __name__ == '__main__':
