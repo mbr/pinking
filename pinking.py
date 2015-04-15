@@ -263,9 +263,15 @@ def run_gui(scr, pi_rev):
 
     PinWindow(scr, PIN_LAYOUT[pi_rev])
 
-    # busy work for now
+    scr.nodelay(1)
     while True:
-        pass
+        ch = scr.getch()
+        if ch is not -1:
+            # handle input
+            if ch == ord('q'):
+                return
+
+        # fixme: event driven would be nice
 
 
 if __name__ == '__main__':
