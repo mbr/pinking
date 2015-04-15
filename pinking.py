@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
 import argparse
+import curses
 from importlib import import_module
 import os
 import platform
 import subprocess
 import sys
+
+
+HOME_URL = 'https://github.com/mbr/pinking'
 
 
 # the "Fake GPIO" module
@@ -177,6 +181,17 @@ def main():
                       ))
     else:
         pi_rev = args.rev
+
+    if not pi_rev in PIN_LAYOUT:
+        exiterror('I don''t know the pin layout for {}. Sorry.\n'
+                  'Please report this issue to {}'
+                  .format(pi_rev, HOME_URL))
+
+    run_gui(pi_rev)
+
+
+def run_gui(pi_rev):
+    pass
 
 
 if __name__ == '__main__':
