@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 
+import argparse
 from importlib import import_module
 import os
 import platform
 import subprocess
 import sys
+
+# contains a suggestion for installation for various potentially missing
+# module
+PKG_NAMES = {
+    2: {
+        'RPi.GPIO': 'python-rpi.gpio',
+    },
+    3: {
+        'RPi.GPIO': 'python3-rpi.gpio',
+    }
+}
 
 
 def exiterror(message, status=1):
@@ -39,13 +51,13 @@ def confirm(message, default=True):
     return inp
 
 
-def try_imports(*names):
-    mods = []
+def try_imports(names):
+    mods = {}
     missing = []
 
-    for name in names:
+    for name, modname in names.items():
         try:
-            mods.append(import_module(name))
+            mods[name] = import_module(modname)
         except ImportError:
             missing.append(name)
 
@@ -55,8 +67,8 @@ def try_imports(*names):
             format(', '.join(missing))
         )
 
-        # if not platform.dist()[0] == 'debian':
-        #     exiterror('Please install the missing packages.')
+        if not platform.dist()[0] == 'debian':
+            exiterror('Please install the missing packages.')
 
         # we're hopefully on raspbian
         debs = []
@@ -80,7 +92,7 @@ def try_imports(*names):
             exiterror('Cannot continue with missing packages.')
 
         # auto-installation succeeded (hopefully)
-        return try_imports(*names)
+        return try_imports(names)
 
     return mods
 
@@ -93,22 +105,21 @@ def ensure_uid_0():
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--fake-gpio', action='store_true',
+                        help='Do not use GPIO library, fake input instead.')
+    args = parser.parse_args()
+
     ensure_uid_0()
 
-    GPIO = try_imports('RPi.GPIO')
-    print GPIO
-
-
-# contains a suggestion for installation for various potentially missing
-# module
-PKG_NAMES = {
-    2: {
-        'RPi.GPIO': 'python-rpi.gpio',
-    },
-    3: {
-        'RPi.GPIO': 'python3-rpi.gpio',
+    required_modules = {
     }
-}
+
+    if not args.fake_gpio:
+        required_modules['GPIO'] = 'RPi.GPIO'
+
+    # import the modules we need
+    globals().update(try_imports(required_modules))
 
 
 if __name__ == '__main__':
