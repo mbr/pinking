@@ -221,37 +221,47 @@ def main():
     curses.wrapper(run_gui, pi_rev)
 
 
+class PinWindow(object):
+    def __init__(self, scr, layout):
+        self.scr = scr
+        self.layout = layout
+        self.redraw()
+
+    def redraw(self):
+        layout = self.layout
+        scr = self.scr
+
+        # calculate the maximum width required for any label
+        label_width = max(len(n) for n in layout)
+
+        # label format left and right
+        lfmt = ('{:>%d}' % label_width,
+                '{:<%d}' % label_width)
+        pfmt = '{:2}'
+
+        for pin, name in enumerate(layout):
+            row = pin // 2
+            col = pin % 2
+
+            # row:
+            #   lw
+            # **lw** XX XX **lw**
+
+            label = lfmt[col].format(layout[pin])
+            scr.addstr(row, col * (label_width + 7), label)
+
+            # draw pin:
+            num = pfmt.format(pin)
+            scr.addstr(row, label_width + 1 + col * 3, num)
+
+        scr.refresh()
+
+
 def run_gui(scr, pi_rev):
     # turn off cursor
     curses.curs_set(0)
-    pwin = scr
 
-    layout = PIN_LAYOUT[pi_rev]
-
-    # the pin-layout window
-    label_width = max(len(n) for n in layout)
-
-    # label format left and right
-    lfmt = ('{:>%d}' % label_width,
-            '{:<%d}' % label_width)
-    pfmt = '{:2}'
-
-    for pin, name in enumerate(layout):
-        row = pin // 2
-        col = pin % 2
-
-        # row:
-        #   lw
-        # **lw** XX XX **lw**
-
-        label = lfmt[col].format(layout[pin])
-        pwin.addstr(row, col * (label_width + 7), label)
-
-        # draw pin:
-        num = pfmt.format(pin)
-        pwin.addstr(row, label_width + 1 + col * 3, num)
-
-    pwin.refresh()
+    PinWindow(scr, PIN_LAYOUT[pi_rev])
 
     # busy work for now
     while True:
