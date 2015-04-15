@@ -251,7 +251,7 @@ class PinWindow(object):
             scr.addstr(row, col * (label_width + 7), label)
 
             # draw pin:
-            num = pfmt.format(pin)
+            num = pfmt.format(pin + 1)
             scr.addstr(row, label_width + 1 + col * 3, num)
 
         scr.refresh()
