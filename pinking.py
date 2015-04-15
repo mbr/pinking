@@ -260,15 +260,16 @@ class PinWindow(object):
             # row:
             #   lw
             # **lw** XX XX **lw**
+            extra = 0
+            if pin == selected:
+                extra = curses.A_BOLD
 
             label = lfmt[col].format(layout[pin])
-            scr.addstr(row, col * (label_width + 7), label)
+            scr.addstr(row, col * (label_width + 7), label, extra)
 
             # draw pin:
             num = pfmt.format(pin + 1)
-            if pin == selected:
-                num = 'XX'
-            scr.addstr(row, label_width + 1 + col * 3, num)
+            scr.addstr(row, label_width + 1 + col * 3, num, extra)
 
         scr.refresh()
 
