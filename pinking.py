@@ -221,14 +221,28 @@ def main():
     curses.wrapper(run_gui, pi_rev)
 
 
+class Observable(object):
+    def __init__(self):
+        self.observers = []
+
+    def register_observer(self, callback):
+        self.observers.append(callback)
+
+    def notify(self):
+        for obs in self.observers:
+            obs()
+
+
 class PinWindow(object):
-    def __init__(self, scr, layout):
+    def __init__(self, scr, model):
         self.scr = scr
-        self.layout = layout
+        self.model = model
+        model.register_observer(self.redraw)
         self.redraw()
 
     def redraw(self):
-        layout = self.layout
+        layout = self.model.layout
+        selected = self.model.selected_pin
         scr = self.scr
 
         # calculate the maximum width required for any label
@@ -252,24 +266,73 @@ class PinWindow(object):
 
             # draw pin:
             num = pfmt.format(pin + 1)
+            if pin == selected:
+                num = 'XX'
             scr.addstr(row, label_width + 1 + col * 3, num)
 
         scr.refresh()
 
 
+class PinModel(Observable):
+    def __init__(self, layout):
+        super(PinModel, self).__init__()
+        self.layout = layout
+        self.selected_pin = 0
+
+    def handle_keypress(self, keycode):
+        if keycode == ord('j') or keycode == curses.KEY_DOWN:
+            self.selected_pin += 2
+            self.selected_pin %= len(self.layout)
+            self.notify()
+            return True
+        if keycode == ord('k') or keycode == curses.KEY_UP:
+            self.selected_pin -= 2
+            self.selected_pin %= len(self.layout)
+            self.notify()
+            return True
+        if keycode == ord('h') or keycode == curses.KEY_LEFT:
+            if self.selected_pin % 2:
+                self.selected_pin -= 1
+                self.selected_pin %= len(self.layout)
+                self.notify()
+            return True
+        if keycode == ord(';') or keycode == curses.KEY_RIGHT:
+            if not self.selected_pin % 2:
+                self.selected_pin += 1
+                self.selected_pin %= len(self.layout)
+                self.notify()
+            return True
+
+
+class GuiController(object):
+    def handle_keypress(self, keycode):
+        if keycode == ord('q'):
+            sys.exit(0)
+            return True
+
+
 def run_gui(scr, pi_rev):
     # turn off cursor
     curses.curs_set(0)
+    layout = PIN_LAYOUT[pi_rev]
 
-    PinWindow(scr, PIN_LAYOUT[pi_rev])
+    ctrl = GuiController()
+    pm = PinModel(layout)
+    PinWindow(scr, pm)
+
+    ctrls = [
+        ctrl,
+        pm,
+    ]
 
     scr.nodelay(1)
     while True:
         ch = scr.getch()
         if ch is not -1:
-            # handle input
-            if ch == ord('q'):
-                return
+            # let any controller handle the keypress
+            for c in ctrls:
+                if c.handle_keypress(ch):
+                    continue
 
         # fixme: event driven would be nice
 
