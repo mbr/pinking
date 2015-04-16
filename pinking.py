@@ -198,7 +198,7 @@ def main():
     if not args.fake_gpio:
         required_modules['GPIO'] = 'RPi.GPIO'
     else:
-        globals()['GPIO'] = FakeGPIO
+        globals()['GPIO'] = FakeGPIO()
 
     # import the modules we need
     globals().update(try_imports(required_modules))
