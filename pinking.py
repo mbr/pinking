@@ -389,7 +389,18 @@ class PinModel(Observable):
         # set GPIO mode
         GPIO.setmode(GPIO.BOARD)
 
+    def _on_edge_detect(self, channel):
+        pin = channel - 1
+        log.debug('Edge detected on {}'.format(channel))
+
+        nv = GPIO.input(channel)
+        if nv != self.in_values[pin]:
+            self.in_values[pin] = nv
+            self.notify()
+
     def set_direction(self, pin, d):
+        channel = pin + 1
+
         name = self.layout[pin]
 
         if name in self.RESERVED_PINS:
@@ -397,7 +408,13 @@ class PinModel(Observable):
             return  # ignore ground
         self.directions[pin] = d
 
-        GPIO.setup(pin + 1, d, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(channel, d, pull_up_down=GPIO.PUD_DOWN)
+
+        if d == GPIO.IN:
+            GPIO.add_event_detect(channel, GPIO.BOTH, self._on_edge_detect)
+        else:
+            # remove previously installed event handler
+            GPIO.remove_event_detect(channel)
 
         log.debug('Setting pin direction: {} #{} {}'.format(
             'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
@@ -409,7 +426,7 @@ class PinModel(Observable):
         log.debug('Setting output: {} #{} {}'.format(
             value, pin, self.layout[pin],
         ))
-        GPIO.output(pin + 1, value)
+        GPIO.output(channel, value)
 
         self.notify()
 
