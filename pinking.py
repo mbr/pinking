@@ -228,7 +228,10 @@ def main():
                   .format(pi_rev, HOME_URL))
 
     # FIXME: somehow, restore \n -> \r\n after curses exists
-    curses.wrapper(run_gui, pi_rev)
+    try:
+        curses.wrapper(run_gui, pi_rev)
+    finally:
+        GPIO.cleanup()
 
 
 class Observable(object):
