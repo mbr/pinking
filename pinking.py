@@ -286,9 +286,6 @@ class PinWindow(Widget):
             row = pin // 2
             col = pin % 2
 
-            # row:
-            #   lw
-            # **lw** XX XX **lw**
             color = curses.color_pair(0)
             extra_label = color
             extra_pin = color
