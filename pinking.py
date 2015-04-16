@@ -297,6 +297,11 @@ class PinWindow(Widget):
                 extra_label |= curses.color_pair(2)
                 extra_pin |= curses.color_pair(2)
 
+            # output value
+            if self.model.out_values[pin]:
+                extra_label |= curses.A_REVERSE
+                extra_pin |= curses.A_REVERSE
+
             # special names
             if name in ('5V', '3V3'):
                 extra_label |= curses.color_pair(1)
@@ -366,7 +371,9 @@ class PinModel(Observable):
         super(PinModel, self).__init__()
         self.layout = layout
         self.selected_pin = 0
-        self.directions = range(len(layout))
+        self.directions = [None] * len(layout)
+        self.out_values = [0] * len(layout)
+        self.in_values = [0] * len(layout)
 
         # set GPIO mode
         GPIO.setmode(GPIO.BOARD)
@@ -382,6 +389,15 @@ class PinModel(Observable):
         log.debug('Setting pin direction: {} #{} {}'.format(
             'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
         ))
+
+    def set_output_value(self, pin, value):
+        self.out_values[pin] = value
+
+        log.debug('Setting output: {} #{} {}'.format(
+            value, pin, self.layout[pin],
+        ))
+
+        self.notify()
 
     def reset_channels(self):
         for n, name in enumerate(self.layout):
@@ -422,6 +438,12 @@ class PinModel(Observable):
             else:
                 curses.flash()
             return True
+        if keycode == ord('t') or keycode == ord('\n'):
+            if self.directions[self.selected_pin] == GPIO.OUT:
+                self.set_output_value(
+                    self.selected_pin,
+                    0 if self.out_values[self.selected_pin] else 1
+                )
 
 
 class GuiController(object):
