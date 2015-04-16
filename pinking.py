@@ -272,7 +272,7 @@ class PinWindow(Widget):
         # label format left and right
         lfmt = ('{:>%d}' % label_width,
                 '{:<%d}' % label_width)
-        pfmt = '({:2})'
+        pfmt = '[{:2}]'
 
         for pin, name in enumerate(layout):
             row = pin // 2
@@ -281,8 +281,9 @@ class PinWindow(Widget):
             # row:
             #   lw
             # **lw** XX XX **lw**
-            extra_label = curses.color_pair(0)
-            extra_pin = curses.color_pair(0)
+            color = curses.color_pair(0)
+            extra_label = color
+            extra_pin = color
 
             if pin == selected:
                 extra_label = curses.A_BOLD
@@ -291,24 +292,23 @@ class PinWindow(Widget):
             # direction
             pdir = self.model.directions[pin]
             if pdir == GPIO.IN:
-                extra_label |= curses.color_pair(6)
-                extra_pin |= curses.color_pair(6)
+                color = curses.color_pair(6)
             elif pdir == GPIO.OUT:
-                extra_label |= curses.color_pair(2)
-                extra_pin |= curses.color_pair(2)
+                color = curses.color_pair(2)
 
             # output value
             if self.model.out_values[pin]:
-                extra_label |= curses.A_REVERSE
-                extra_pin |= curses.A_REVERSE
+                extra_label = curses.A_REVERSE
+                extra_pin = curses.A_REVERSE
 
             # special names
             if name in ('5V', '3V3'):
-                extra_label |= curses.color_pair(1)
-                extra_pin |= curses.color_pair(1)
+                color = curses.color_pair(1)
             elif name == 'GND':
-                extra_label |= curses.color_pair(3)
-                extra_pin |= curses.color_pair(3)
+                color = curses.color_pair(3)
+
+            # add colors
+            extra_label |= color
 
             label = lfmt[col].format(layout[pin])
             scr.addstr(row, col * (label_width + 11), label, extra_label)
