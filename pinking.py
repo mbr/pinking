@@ -3,6 +3,7 @@
 import argparse
 import curses
 from importlib import import_module
+import logging
 import os
 import platform
 from Queue import Queue
@@ -235,7 +236,17 @@ class Observable(object):
             obs()
 
 
-class PinWindow(object):
+class Widget(object):
+    @property
+    def height(self):
+        return self.scr.getmaxyx()[0]
+
+    @property
+    def width(self):
+        return self.scr.getmaxyx()[1]
+
+
+class PinWindow(Widget):
     def __init__(self, scr, model):
         self.scr = scr
         self.model = model
@@ -246,6 +257,7 @@ class PinWindow(object):
         layout = self.model.layout
         selected = self.model.selected_pin
         scr = self.scr
+        scr.clear()
 
         # calculate the maximum width required for any label
         label_width = max(len(n) for n in layout)
@@ -264,7 +276,7 @@ class PinWindow(object):
             # **lw** XX XX **lw**
             extra = 0
             if pin == selected:
-                extra = curses.A_BOLD
+                extra = curses.A_REVERSE
 
             label = lfmt[col].format(layout[pin])
             scr.addstr(row, col * (label_width + 7), label, extra)
@@ -274,6 +286,52 @@ class PinWindow(object):
             scr.addstr(row, label_width + 1 + col * 3, num, extra)
 
         scr.refresh()
+
+    @classmethod
+    def from_model(cls, model, y=0, x=0):
+        label_width = max(len(n) for n in model.layout)
+
+        w = 2 * label_width + 8
+        mlen = len(model.layout)
+        h = mlen // 2
+
+        scr = curses.newwin(h, w, y, x)
+
+        return cls(scr, model)
+
+
+class LogWindow(logging.Handler):
+    def __init__(self, scr, level=logging.NOTSET):
+        super(LogWindow, self).__init__(level)
+        self.scr = scr
+        self.entries = []
+
+    def update(self):
+        self.scr.clear()
+        self.scr.border()
+        h, w = self.scr.getmaxyx()
+
+        num_entries = h - 2
+        for line, record in enumerate(self.entries[-num_entries:]):
+            # determine color
+            if not curses.has_colors:
+                color_pair = 0
+            else:
+                color_pair = curses.color_pair(7)
+
+                if record.levelno >= logging.WARNING:
+                    color_pair = curses.color_pair(3)
+                if record.levelno >= logging.ERROR:
+                    color_pair = curses.color_pair(1)
+
+            entry = self.format(record)
+
+            self.scr.addnstr(line+1, 1, entry, w-2, color_pair)
+        self.scr.refresh()
+
+    def handle(self, record):
+        self.entries.append(record)
+        self.update()
 
 
 class PinModel(Observable):
@@ -323,25 +381,51 @@ def read_keypresses(scr, q):
 
 
 def run_gui(scr, pi_rev):
-    # turn off cursor
-    curses.curs_set(0)
-    layout = PIN_LAYOUT[pi_rev]
-
-    ctrl = GuiController()
-    pm = PinModel(layout)
-    PinWindow(scr, pm)
-
-    ctrls = [
-        ctrl,
-        pm,
-    ]
-
     events = Queue()
 
     # start listening to keyboard events
     key_thread = threading.Thread(target=read_keypresses, args=(scr, events))
     key_thread.daemon = True
     key_thread.start()
+
+    # turn off cursor
+    curses.curs_set(0)
+    curses.start_color()
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_RED, -1)
+    curses.init_pair(2, curses.COLOR_GREEN, -1)
+    curses.init_pair(3, curses.COLOR_YELLOW, -1)
+    curses.init_pair(4, curses.COLOR_BLUE, -1)
+    curses.init_pair(5, curses.COLOR_MAGENTA, -1)
+    curses.init_pair(6, curses.COLOR_CYAN, -1)
+    curses.init_pair(7, curses.COLOR_WHITE, -1)
+
+    layout = PIN_LAYOUT[pi_rev]
+
+    ctrl = GuiController()
+    pm = PinModel(layout)
+
+    pw = PinWindow.from_model(pm)
+
+    ctrls = [
+        ctrl,
+        pm,
+    ]
+
+    screen_height, screen_width = scr.getmaxyx()
+
+    # add logging window
+    lwin = LogWindow(curses.newwin(screen_height - pw.height - 1,
+                                   screen_width,
+                                   pw.height + 1,
+                                   0))
+
+    #logging.basicConfig(level=logging.NOTSET)
+    log = logging.getLogger()
+    log.setLevel(logging.DEBUG)
+    log.addHandler(lwin)
+
+    log.debug('Starting event loop...')
 
     while True:
         ev = events.get()
