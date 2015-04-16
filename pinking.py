@@ -70,7 +70,7 @@ PI_MODELS = {
 def get_cpu_revision():
     for line in open('/proc/cpuinfo').readlines():
         if line.startswith('Revision'):
-            return line[line.rfind(':'):].strip()
+            return line[line.rfind(':') + 2:].strip()
 
 
 PIN_LAYOUT = {
@@ -215,9 +215,8 @@ def main():
     globals().update(try_imports(required_modules))
 
     if not args.rev:
-        pi_rev = get_cpu_revision()
-
-        if not pi_rev in PI_MODELS:
+        pi_rev = PI_MODELS.get(get_cpu_revision(), None)
+        if not pi_rev:
             exiterror('Found the following Revision in /proc/cpuinfo, which '
                       'is not one I recognize: {}\n'
                       'You can manually specify one of\n  {}\n\nusing the '
@@ -229,7 +228,7 @@ def main():
         pi_rev = args.rev
 
     if not pi_rev in PIN_LAYOUT:
-        exiterror('I don''t know the pin layout for {}. Sorry.\n'
+        exiterror('I don\'t know the pin layout for {}. Sorry.\n'
                   'Please report this issue to {}'
                   .format(pi_rev, HOME_URL))
 
