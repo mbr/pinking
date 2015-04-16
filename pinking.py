@@ -410,7 +410,7 @@ class PinModel(Observable):
                 self.selected_pin %= len(self.layout)
                 self.notify()
             return True
-        if keycode == ord('d') or keycode == ord('\n'):
+        if keycode == ord('d'):
             old_dir = self.directions[self.selected_pin]
             if old_dir is not None:
                 self.set_direction(
