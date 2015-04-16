@@ -19,7 +19,12 @@ HOME_URL = 'https://github.com/mbr/pinking'
 
 # the "Fake GPIO" module
 class FakeGPIO(object):
-    pass
+    BOARD = None
+    IN = -1
+    OUT = 1
+
+    def setmode(self, mode):
+        pass
 
 
 # contains a suggestion for installation for various potentially missing
@@ -267,7 +272,7 @@ class PinWindow(Widget):
         # label format left and right
         lfmt = ('{:>%d}' % label_width,
                 '{:<%d}' % label_width)
-        pfmt = '{:2}'
+        pfmt = '({:2})'
 
         for pin, name in enumerate(layout):
             row = pin // 2
@@ -276,16 +281,36 @@ class PinWindow(Widget):
             # row:
             #   lw
             # **lw** XX XX **lw**
-            extra = 0
+            extra_label = curses.color_pair(0)
+            extra_pin = curses.color_pair(0)
+
             if pin == selected:
-                extra = curses.A_REVERSE
+                extra_label = curses.A_BOLD
+                extra_pin = curses.A_BOLD
+
+            # direction
+            pdir = self.model.directions[pin]
+            if pdir == GPIO.IN:
+                extra_label |= curses.color_pair(6)
+                extra_pin |= curses.color_pair(6)
+            elif pdir == GPIO.OUT:
+                extra_label |= curses.color_pair(2)
+                extra_pin |= curses.color_pair(2)
+
+            # special names
+            if name in ('5V', '3V3'):
+                extra_label |= curses.color_pair(1)
+                extra_pin |= curses.color_pair(1)
+            elif name == 'GND':
+                extra_label |= curses.color_pair(3)
+                extra_pin |= curses.color_pair(3)
 
             label = lfmt[col].format(layout[pin])
-            scr.addstr(row, col * (label_width + 7), label, extra)
+            scr.addstr(row, col * (label_width + 11), label, extra_label)
 
             # draw pin:
             num = pfmt.format(pin + 1)
-            scr.addstr(row, label_width + 1 + col * 3, num, extra)
+            scr.addstr(row, label_width + 1 + col * 5, num, extra_pin)
 
         scr.refresh()
 
@@ -293,7 +318,7 @@ class PinWindow(Widget):
     def from_model(cls, model, y=0, x=0):
         label_width = max(len(n) for n in model.layout)
 
-        w = 2 * label_width + 8
+        w = 2 * label_width + 12
         mlen = len(model.layout)
         h = mlen // 2
 
@@ -341,8 +366,28 @@ class PinModel(Observable):
         super(PinModel, self).__init__()
         self.layout = layout
         self.selected_pin = 0
+        self.directions = range(len(layout))
+
+        # set GPIO mode
+        GPIO.setmode(GPIO.BOARD)
+
+    def set_direction(self, num, d):
+        name = self.layout[num]
+        if name in ('GND', '5V', '3V3'):
+            self.directions[num] = None
+            return  # ignore ground
+        self.directions[num] = d
+
+        log.debug('Setting pin direction: {} #{} {}'.format(
+            'in' if d == GPIO.IN else 'out', num, self.layout[num],
+        ))
+
+    def reset_channels(self):
+        for n, name in enumerate(self.layout):
+            self.set_direction(n, GPIO.IN)
 
     def handle_keypress(self, keycode):
+        # controller code, tacked onto model. sorry
         if keycode == ord('j') or keycode == curses.KEY_DOWN:
             self.selected_pin += 2
             self.selected_pin %= len(self.layout)
@@ -364,6 +409,17 @@ class PinModel(Observable):
                 self.selected_pin += 1
                 self.selected_pin %= len(self.layout)
                 self.notify()
+            return True
+        if keycode == ord('d') or keycode == ord('\n'):
+            old_dir = self.directions[self.selected_pin]
+            if old_dir is not None:
+                self.set_direction(
+                    self.selected_pin,
+                    GPIO.IN if old_dir == GPIO.OUT else GPIO.OUT
+                )
+                self.notify()
+            else:
+                curses.flash()
             return True
 
 
@@ -406,6 +462,7 @@ def run_gui(scr, pi_rev):
 
     ctrl = GuiController()
     pm = PinModel(layout)
+    pm.reset_channels()
 
     pw = PinWindow.from_model(pm)
 
