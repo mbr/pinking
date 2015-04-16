@@ -296,15 +296,19 @@ class PinWindow(Widget):
 
             # direction
             pdir = self.model.directions[pin]
+            value = None
+
             if pdir == GPIO.IN:
                 color = curses.color_pair(6)
+                value = self.model.in_values[pin]
             elif pdir == GPIO.OUT:
                 color = curses.color_pair(2)
+                value = self.model.out_values[pin]
 
-            # output value
-            if self.model.out_values[pin]:
-                extra_label = curses.A_REVERSE
-                extra_pin = curses.A_REVERSE
+            # output or input value
+            if value == GPIO.HIGH:
+                extra_label |= curses.A_REVERSE
+                extra_pin |= curses.A_REVERSE
 
             # special names
             if name in ('5V', '3V3'):
@@ -409,9 +413,24 @@ class PinModel(Observable):
 
         self.notify()
 
+    def read_input_values(self):
+        changed = False
+
+        for pin, d in enumerate(self.directions):
+            if d == GPIO.IN:
+                nv = GPIO.input(pin + 1)
+                if nv != self.in_values[pin]:
+                    self.in_values[pin] = nv
+                    changed = True
+
+        if changed:
+            self.notify()
+
     def reset_channels(self):
         for n, name in enumerate(self.layout):
             self.set_direction(n, GPIO.IN)
+
+        self.read_input_values()
 
     def handle_keypress(self, keycode):
         # controller code, tacked onto model. sorry
@@ -452,8 +471,14 @@ class PinModel(Observable):
             if self.directions[self.selected_pin] == GPIO.OUT:
                 self.set_output_value(
                     self.selected_pin,
-                    0 if self.out_values[self.selected_pin] else 1
+                    GPIO.LOW if self.out_values[self.selected_pin] ==
+                    GPIO.HIGH else GPIO.HIGH
                 )
+            return True
+        if keycode == ord('r'):
+            self.read_input_values()
+            log.info(''.join(map(str, self.in_values)))
+            return True
 
 
 class GuiController(object):
