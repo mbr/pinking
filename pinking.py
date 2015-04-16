@@ -397,7 +397,7 @@ class PinModel(Observable):
             return  # ignore ground
         self.directions[pin] = d
 
-        GPIO.setup(pin + 1, d)
+        GPIO.setup(pin + 1, d, pull_up_down=GPIO.PUD_DOWN)
 
         log.debug('Setting pin direction: {} #{} {}'.format(
             'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
