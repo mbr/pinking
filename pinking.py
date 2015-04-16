@@ -5,8 +5,10 @@ import curses
 from importlib import import_module
 import os
 import platform
+from Queue import Queue
 import subprocess
 import sys
+import threading
 
 
 HOME_URL = 'https://github.com/mbr/pinking'
@@ -312,6 +314,14 @@ class GuiController(object):
             return True
 
 
+def read_keypresses(scr, q):
+    while True:
+        ch = scr.getch()
+
+        if ch is not -1:
+            q.put(('keypress', ch))
+
+
 def run_gui(scr, pi_rev):
     # turn off cursor
     curses.curs_set(0)
@@ -326,16 +336,25 @@ def run_gui(scr, pi_rev):
         pm,
     ]
 
-    scr.nodelay(1)
+    events = Queue()
+
+    # start listening to keyboard events
+    key_thread = threading.Thread(target=read_keypresses, args=(scr, events))
+    key_thread.daemon = True
+    key_thread.start()
+
     while True:
-        ch = scr.getch()
-        if ch is not -1:
+        ev = events.get()
+
+        if 'keypress' == ev[0]:
+            keycode = ev[1]
             # let any controller handle the keypress
             for c in ctrls:
-                if c.handle_keypress(ch):
+                if c.handle_keypress(keycode):
                     continue
-
-        # fixme: event driven would be nice
+        else:
+            raise RuntimeError('Received unexpected event {}'
+                               .format(ev))
 
 
 if __name__ == '__main__':
