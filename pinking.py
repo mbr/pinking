@@ -22,9 +22,15 @@ class FakeGPIO(object):
     BOARD = None
     IN = -1
     OUT = 1
+    LOW = 0
+    HIGH = 1
 
-    def setmode(self, mode):
-        pass
+    def __getattr__(self, name):
+        def f(*args):
+            log.debug('FakeGPIO: {}({})'.format(name, ', '.join(
+                map(str, args)))
+            )
+        return f
 
 
 # contains a suggestion for installation for various potentially missing
@@ -389,6 +395,8 @@ class PinModel(Observable):
             return  # ignore ground
         self.directions[pin] = d
 
+        GPIO.setup(pin, d)
+
         log.debug('Setting pin direction: {} #{} {}'.format(
             'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
         ))
@@ -399,6 +407,7 @@ class PinModel(Observable):
         log.debug('Setting output: {} #{} {}'.format(
             value, pin, self.layout[pin],
         ))
+        GPIO.output(pin, value)
 
         self.notify()
 
