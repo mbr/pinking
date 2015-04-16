@@ -375,6 +375,8 @@ class LogWindow(logging.Handler):
 
 
 class PinModel(Observable):
+    RESERVED_PINS = ('GND', '5V', '3V3', 'ID_SC', 'ID_SD')
+
     def __init__(self, layout):
         super(PinModel, self).__init__()
         self.layout = layout
@@ -389,12 +391,12 @@ class PinModel(Observable):
     def set_direction(self, pin, d):
         name = self.layout[pin]
 
-        if name in ('GND', '5V', '3V3'):
+        if name in self.RESERVED_PINS:
             self.directions[pin] = None
             return  # ignore ground
         self.directions[pin] = d
 
-        GPIO.setup(pin, d)
+        GPIO.setup(pin + 1, d)
 
         log.debug('Setting pin direction: {} #{} {}'.format(
             'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
@@ -406,7 +408,7 @@ class PinModel(Observable):
         log.debug('Setting output: {} #{} {}'.format(
             value, pin, self.layout[pin],
         ))
-        GPIO.output(pin, value)
+        GPIO.output(pin + 1, value)
 
         self.notify()
 
