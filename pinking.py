@@ -371,15 +371,16 @@ class PinModel(Observable):
         # set GPIO mode
         GPIO.setmode(GPIO.BOARD)
 
-    def set_direction(self, num, d):
-        name = self.layout[num]
+    def set_direction(self, pin, d):
+        name = self.layout[pin]
+
         if name in ('GND', '5V', '3V3'):
-            self.directions[num] = None
+            self.directions[pin] = None
             return  # ignore ground
-        self.directions[num] = d
+        self.directions[pin] = d
 
         log.debug('Setting pin direction: {} #{} {}'.format(
-            'in' if d == GPIO.IN else 'out', num, self.layout[num],
+            'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
         ))
 
     def reset_channels(self):
