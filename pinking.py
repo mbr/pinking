@@ -12,6 +12,8 @@ import sys
 import threading
 
 
+log = logging.getLogger()
+
 HOME_URL = 'https://github.com/mbr/pinking'
 
 
@@ -420,8 +422,6 @@ def run_gui(scr, pi_rev):
                                    pw.height + 1,
                                    0))
 
-    #logging.basicConfig(level=logging.NOTSET)
-    log = logging.getLogger()
     log.setLevel(logging.DEBUG)
     log.addHandler(lwin)
 
