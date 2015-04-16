@@ -308,7 +308,7 @@ class LogWindow(logging.Handler):
         self.scr = scr
         self.entries = []
 
-    def update(self):
+    def redraw(self):
         self.scr.clear()
         self.scr.border()
         h, w = self.scr.getmaxyx()
@@ -333,7 +333,7 @@ class LogWindow(logging.Handler):
 
     def handle(self, record):
         self.entries.append(record)
-        self.update()
+        self.dirty = True
 
 
 class PinModel(Observable):
@@ -428,6 +428,9 @@ def run_gui(scr, pi_rev):
     log.debug('Starting event loop...')
 
     while True:
+        if lwin.dirty:
+            lwin.redraw()
+
         ev = events.get()
 
         if 'keypress' == ev[0]:
