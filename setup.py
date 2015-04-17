@@ -23,7 +23,7 @@ setup(
     install_requires=['click'],
     entry_points={
         'console_scripts': [
-            'pinking = pinking:main',
+            'pinking = pinking.cli:main',
         ],
     }
 )
