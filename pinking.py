@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
 import curses
 from importlib import import_module
 import logging
@@ -10,6 +9,8 @@ from Queue import Queue
 import subprocess
 import sys
 import threading
+
+import click
 
 
 log = logging.getLogger()
@@ -193,20 +194,18 @@ def ensure_uid_0():
                   '  sudo {}'.format(sys.argv[0]))
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--fake-gpio', action='store_true',
-                        help='Do not use GPIO library, fake input instead.')
-    parser.add_argument('--rev', choices=PI_MODELS.values(),
-                        help='Manually specify hardware revision.')
-    args = parser.parse_args()
-
+@click.command()
+@click.option('--fake-gpio', '-G', is_flag=True,
+              help='Do not use GPIO library, fake input instead.')
+@click.option('--rev', '-r', type=click.Choice(PI_MODELS.values()),
+              help='Manually specify hardware revision.')
+def main(fake_gpio, rev):
     ensure_uid_0()
 
     required_modules = {
     }
 
-    if not args.fake_gpio:
+    if not fake_gpio:
         required_modules['GPIO'] = 'RPi.GPIO'
     else:
         globals()['GPIO'] = FakeGPIO()
@@ -214,7 +213,7 @@ def main():
     # import the modules we need
     globals().update(try_imports(required_modules))
 
-    if not args.rev:
+    if not rev:
         pi_rev = PI_MODELS.get(get_cpu_revision(), None)
         if not pi_rev:
             exiterror('Found the following Revision in /proc/cpuinfo, which '
@@ -225,7 +224,7 @@ def main():
                           sorted(PI_MODELS.values()))
                       ))
     else:
-        pi_rev = args.rev
+        pi_rev = rev
 
     if not pi_rev in PIN_LAYOUT:
         exiterror('I don\'t know the pin layout for {}. Sorry.\n'
