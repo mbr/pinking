@@ -20,7 +20,6 @@ setup(
     author_email='git@marcbrinkmann.de',
     url='http://github.com/mbr/pinking',
     license='MIT',
-    py_modules=['pinking'],
     install_requires=['click'],
     entry_points={
         'console_scripts': [
