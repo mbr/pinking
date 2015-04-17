@@ -12,32 +12,12 @@ else:
     PKG_NAMES = {}
 
 
-PI_MODELS = {
-    # from http://www.raspberrypi-spy.co.uk/2012/09/
-    #      checking-your-raspberry-pi-board-version/
-    '0002': 'RPi1_B_1.0_256',
-    '0003': 'RPi1_B_1.0_ECN0001_256',
-    '0004': 'RPi1_B_2.0_256',
-    '0005': 'RPi1_B_2.0_256',
-    '0006': 'RPi1_B_2.0_256',
-    '0007': 'RPi1_A_256',
-    '0008': 'RPi1_A_256',
-    '0009': 'RPi1_A_256',
-    '000d': 'RPi1_B_2.0_512',
-    '000e': 'RPi1_B_2.0_512',
-    '000f': 'RPi1_B_2.0_512',
-    '0010': 'RPi1_B+_512',
-    '0011': 'RPi1_Compute_Module_512',
-    '0012': 'RPi1_A+_256',
-    'a01041': 'Rpi2_B_UK_1024',
-    'a21041': 'Rpi2_B_China_1024',
-}
-
-
 PIN_LAYOUT = {
     # http://www.element14.com/community/docs/DOC-73950
     # /l/raspberry-pi-2-model-b-gpio-40-pin-block-pinout
-    'Rpi2_B_UK_1024': [
+
+    # Raspberry Pi 2:
+    'a01041': [
         # 1            2
         '3V3',         '5V',
         'GPIO02',      '5V',
@@ -65,5 +45,5 @@ PIN_LAYOUT = {
     ]
 }
 
-# aliases:
-PIN_LAYOUT['Rpi2_B_China_1024'] = PIN_LAYOUT['Rpi2_B_UK_1024']
+# China RasPi 2 == UK Raspi 2
+PIN_LAYOUT['a21041'] = PIN_LAYOUT['a01041']

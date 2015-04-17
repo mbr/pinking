@@ -1,14 +1,18 @@
+import curses
 import sys
 
 import click
 
-from .lib import PI_MODELS, PKG_NAMES
+from .lib import PIN_LAYOUT, PKG_NAMES
+
+
+HOME_URL = 'https://github.com/mbr/pinking'
 
 
 @click.command()
 @click.option('--fake-gpio', '-G', is_flag=True,
               help='Do not use GPIO library, fake input instead.')
-@click.option('--rev', '-r', type=click.Choice(PI_MODELS.values()),
+@click.option('--rev', '-r',
               help='Manually specify hardware revision.')
 def main(fake_gpio, rev):
     if fake_gpio:
@@ -27,4 +31,20 @@ def main(fake_gpio, rev):
                        'actual hardware pins to be read!')
             sys.exit(1)
 
+    if rev is None:
+        rev = GPIO.RPI_INFO['REVISION']
+
     click.echo('Using GPIO: {}'.format(GPIO))
+    click.echo('Model [{}]: {[TYPE]}'.format(rev, GPIO.RPI_INFO))
+
+    if not rev in PIN_LAYOUT:
+        click.echo('I don\'t know the pin layout for {}. Sorry.\n'
+                   'Please report this issue to {}'
+                   .format(rev, HOME_URL))
+        sys.exit(1)
+
+    # FIXME: somehow, restore \n -> \r\n after curses exists
+    try:
+        curses.wrapper(run_gui, pi_rev)
+    finally:
+        GPIO.cleanup()

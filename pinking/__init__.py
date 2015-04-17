@@ -12,8 +12,6 @@ import threading
 
 log = logging.getLogger()
 
-HOME_URL = 'https://github.com/mbr/pinking'
-
 
 # the "Fake GPIO" module
 class FakeGPIO(object):
@@ -22,13 +20,6 @@ class FakeGPIO(object):
     OUT = 1
     LOW = 0
     HIGH = 1
-
-    def __getattr__(self, name):
-        def f(*args):
-            log.debug('FakeGPIO: {}({})'.format(name, ', '.join(
-                map(str, args)))
-            )
-        return f
 
 
 def get_cpu_revision():
