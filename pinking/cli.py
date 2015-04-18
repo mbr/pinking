@@ -24,12 +24,7 @@ else:
     PKG_NAMES = {}
 
 
-@click.command()
-@click.option('--fake-gpio', '-G', is_flag=True,
-              help='Do not use GPIO library, fake input instead.')
-@click.option('--rev', '-r',
-              help='Manually specify hardware revision.')
-def main(fake_gpio, rev):
+def load_gpio(fake_gpio):
     if fake_gpio:
         from .fakegpio import GPIO
     else:
@@ -46,22 +41,33 @@ def main(fake_gpio, rev):
                        'actual hardware pins to be read!')
             sys.exit(1)
 
-    if rev is None:
-        rev = GPIO.RPI_INFO['REVISION']
+    return GPIO
 
-    click.echo('Using GPIO: {}'.format(GPIO))
-    click.echo('Model [{}]: {[TYPE]}'.format(rev, GPIO.RPI_INFO))
+
+@click.command()
+@click.option('--fake-gpio', '-G', is_flag=True,
+              help='Do not use GPIO library, fake input instead.')
+@click.option('--rev', '-r',
+              help='Manually specify hardware revision.')
+def main(fake_gpio, rev):
+    gpio = load_gpio(fake_gpio)
+
+    if rev is None:
+        rev = gpio.RPI_INFO['REVISION']
+
+    click.echo('Using GPIO: {}'.format(gpio))
+    click.echo('Model [{}]: {[TYPE]}'.format(rev, gpio.RPI_INFO))
 
     try:
         # instantiate model
-        model = PinKingModel(GPIO, rev)
+        model = PinKingModel(gpio, rev)
     except LayoutNotFoundError as e:
         click.echo('No pin layout known for {}.\n'
                    'Please report this issue to {}'.format(e, HOME_URL))
         sys.exit(1)
 
     with curses_wrap() as stdscr, ExitStack() as cleanup:
-        cleanup.callback(GPIO.cleanup)  # once we're done, reset GPIO pins
+        cleanup.callback(gpio.cleanup)  # once we're done, reset GPIO pins
 
         ui = PinKingUI(stdscr, model)
         ui.run()
