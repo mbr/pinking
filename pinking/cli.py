@@ -75,9 +75,23 @@ def run_gpio_test(model):
 
     for pin in out_pins:
         model.set_direction(pin, model.gpio.OUT)
-        model.set_output_value(pin, model.gpio.HIGH)
+        model.set_output_value(pin, model.gpio.LOW)
 
+    cycles = 0
     for missed_ticks in clock(1.0/poll_freq):
+        cycles += 1 + missed_ticks
+
+        if cycles > poll_freq:
+            cycles = 0
+
+            # every second ms, change an output pins
+            out_pins[0], out_pins[1] = out_pins[1], out_pins[0]
+
+            for n, pin in enumerate(out_pins):
+                hl = model.gpio.HIGH if n % 2 else model.gpio.LOW
+                model.set_direction(pin, model.gpio.OUT)
+                model.set_output_value(pin, hl)
+
         model.read_input_values()
         if missed_ticks:
             click.echo('Missed clock ticks: {}'.format(missed_ticks))
