@@ -45,7 +45,7 @@ def load_gpio(fake_gpio):
     return GPIO
 
 
-def run_gpio_test(model):
+def run_gpio_test(model, show_out):
     logbook.NullHandler(level=logbook.DEBUG).push_application()
     logbook.StderrHandler(level=logbook.INFO).push_application()
 
@@ -66,7 +66,8 @@ def run_gpio_test(model):
         ))
 
     model.in_values_changed.connect(_on_iv_change)
-    model.out_values_changed.connect(_on_ov_change)
+    if show_out:
+        model.out_values_changed.connect(_on_ov_change)
     model.direction_changed.connect(_on_d_change)
 
     # last 2 gpio pins are set to output
@@ -104,7 +105,9 @@ def run_gpio_test(model):
               help='Manually specify hardware revision.')
 @click.option('--test', '-t', is_flag=True,
               help='Run model test.')
-def main(fake_gpio, rev, test):
+@click.option('--test-show-out', is_flag=True,
+              help='Show every output change when running output test.')
+def main(fake_gpio, rev, test, test_show_out):
     gpio = load_gpio(fake_gpio)
 
     if rev is None:
@@ -123,7 +126,7 @@ def main(fake_gpio, rev, test):
 
     if test:
         click.echo('GPIO test mode.')
-        run_gpio_test(model)
+        run_gpio_test(model, test_show_out)
         sys.exit(0)
 
     with curses_wrap() as stdscr, ExitStack() as cleanup:
