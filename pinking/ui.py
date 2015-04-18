@@ -5,8 +5,6 @@ import sys
 
 from logbook import Logger
 
-from lib import PIN_LAYOUT
-
 
 log = Logger('ui')
 
