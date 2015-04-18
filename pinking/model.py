@@ -117,7 +117,7 @@ class PinKingModel(object):
 
         if values != self.in_values:
             self.in_values = values
-            self.in_values_changed.send(self, in_values=values)
+            self.in_values_changed.send(self, values=values)
 
     # def handle_keypress(self, keycode):
     #     # controller code, tacked onto model. sorry

@@ -1,12 +1,14 @@
 from contextlib2 import ExitStack
 import sys
+import time
 
 import click
+import logbook
 
 from .exc import LayoutNotFoundError
 from .model import PinKingModel
 from .ui import PinKingUI
-from .util import curses_wrap
+from .util import curses_wrap, clock
 
 
 HOME_URL = 'https://github.com/mbr/pinking'
@@ -44,11 +46,15 @@ def load_gpio(fake_gpio):
 
 
 def run_gpio_test(model):
-    poll_rate = 10.0
-    click.echo('{} Hz'.format(poll_rate))
+    logbook.NullHandler(level=logbook.DEBUG).push_application()
+    logbook.StderrHandler(level=logbook.INFO).push_application()
+
+    poll_freq = 10.0
+    click.echo('{} Hz'.format(poll_freq))
 
     def _on_iv_change(model, values):
-        click.echo('IN: {}'.format(''.join(map(str, values))))
+        click.echo('IN: {}'.format(''.join('.' if v is None else str(v)
+                                           for v in values)))
 
     def _on_ov_change(model, values):
         click.echo('OUT: {}'.format(''.join(map(str, values))))
@@ -70,6 +76,11 @@ def run_gpio_test(model):
     for pin in out_pins:
         model.set_direction(pin, model.gpio.OUT)
         model.set_output_value(pin, model.gpio.HIGH)
+
+    for missed_ticks in clock(1.0/poll_freq):
+        model.read_input_values()
+        if missed_ticks:
+            click.echo('Missed clock ticks: {}'.format(missed_ticks))
 
 
 @click.command()
