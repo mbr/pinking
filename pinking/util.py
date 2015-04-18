@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import curses
+import time
 
 
 @contextmanager
@@ -33,3 +34,25 @@ def curses_wrap():
     curses.echo()
     curses.nocbreak()
     curses.endwin()
+
+
+def clock(slice_len=1):
+    """Yields trying to keep an accurate clock rate. Will yield number of
+    missed ticks.
+
+    :param slice_len: Length of a single time slice.
+    """
+
+    next_tick = time.time()
+    while True:
+        # yield to caller, returning number of missed ticks
+        missed_ticks = int((time.time() - next_tick) / slice_len)
+        yield missed_ticks
+
+        # sleep until next tick
+        next_tick += slice_len * (1 + missed_ticks)
+        rem = next_tick - time.time()
+        if rem < 0:
+            continue
+
+        time.sleep(rem)
