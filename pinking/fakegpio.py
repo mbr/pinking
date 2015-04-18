@@ -19,6 +19,8 @@ class FakeGPIO(object):
     OUT = 1
     LOW = 0
     HIGH = 1
+    PUD_UP = 1
+    PUD_DOWN = 0
 
     def __getattr__(self, name):
         def f(*args, **kwargs):
