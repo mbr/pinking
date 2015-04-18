@@ -4,7 +4,6 @@ import sys
 import click
 
 from .exc import LayoutNotFoundError
-from .lib import PIN_LAYOUT
 from .model import PinKingModel
 from .ui import PinKingUI
 from .util import curses_wrap
