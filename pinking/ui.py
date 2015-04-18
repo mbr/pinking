@@ -67,26 +67,21 @@ def PinKingUI(Widget):
         curses.init_pair(6, curses.COLOR_CYAN, -1)
         curses.init_pair(7, curses.COLOR_WHITE, -1)
 
-        # instantiate model
-        self.pin_model = PinModel(PIN_LAYOUT[rev])
-
-        # set all channels to input
-        self.pin_model.reset_channels()
-
-        ctrls = [
+        self.ctrls = [
             AppController(),
-            self.pin_model,
+            self.model,
         ]
 
         # instantiate ui windows
-        pw = PinWindow.from_model(pm)
+        PinWindow.from_model(pm)
 
         # add logging window
-        lwin = LogWindow(curses.newwin(self.height - pw.height - 1,
-                                       self.width,
-                                       pw.height + 1,
-                                       0))
+        LogWindow(curses.newwin(self.height - pw.height - 1,
+                                self.width,
+                                pw.height + 1,
+                                0))
 
+    def run(self):
         log.debug('Starting event loop...')
 
         while True:
@@ -95,13 +90,13 @@ def PinKingUI(Widget):
                 widget.redraw()
 
             # get next event
-            ev = events.get()
+            ev = self.events.get()
 
             if 'keypress' == ev[0]:
                 keycode = ev[1]
 
                 # let any controller handle the keypress
-                for c in ctrls:
+                for c in self.ctrls:
                     if c.handle_keypress(keycode):
                         continue
             else:
@@ -115,3 +110,7 @@ def PinKingUI(Widget):
 
             if ch is not -1:
                 q.put(('keypress', ch))
+
+    @classmethod
+    def create_and_run(cls, *args, **kwargs):
+        return cls(*args, **kwargs).run()

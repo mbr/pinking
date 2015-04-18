@@ -1,16 +1,5 @@
 import sys
 
-if sys.version_info.major == 2:
-    PKG_NAMES = {
-        'RPi.GPIO': 'python-rpi.gpio',
-    }
-elif sys.version_info.major == 3:
-    PKG_NAMES = {
-        'RPi.GPIO': 'python3-rpi.gpio',
-    }
-else:
-    PKG_NAMES = {}
-
 
 PIN_LAYOUT = {
     # http://www.element14.com/community/docs/DOC-73950

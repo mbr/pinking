@@ -3,10 +3,23 @@ import sys
 
 import click
 
-from .lib import PIN_LAYOUT, PKG_NAMES
+from .lib import PIN_LAYOUT
+from .model import PinKingModel
+from .ui import PinKingUI
 
 
 HOME_URL = 'https://github.com/mbr/pinking'
+
+if sys.version_info.major == 2:
+    PKG_NAMES = {
+        'RPi.GPIO': 'python-rpi.gpio',
+    }
+elif sys.version_info.major == 3:
+    PKG_NAMES = {
+        'RPi.GPIO': 'python3-rpi.gpio',
+    }
+else:
+    PKG_NAMES = {}
 
 
 @click.command()
@@ -43,8 +56,10 @@ def main(fake_gpio, rev):
                    .format(rev, HOME_URL))
         sys.exit(1)
 
-    # FIXME: somehow, restore \n -> \r\n after curses exists
+    # instantiate model
+    model = PinKingModel(GPIO, PIN_LAYOUT[rev])
+
     try:
-        curses.wrapper(run_gui, pi_rev)
+        curses.wrapper(PinKingUI.create_and_run, model)
     finally:
         GPIO.cleanup()
