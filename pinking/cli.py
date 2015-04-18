@@ -54,7 +54,7 @@ def main(fake_gpio, rev):
 
     try:
         # instantiate model
-        model = PinKingModel(GPIO, PIN_LAYOUT[rev])
+        model = PinKingModel(GPIO, rev)
     except LayoutNotFoundError as e:
         click.echo('No pin layout known for {}.\n'
                    'Please report this issue to {}'.format(e, HOME_URL))
