@@ -3,6 +3,7 @@ import sys
 
 import click
 
+from .exc import LayoutNotFoundError
 from .lib import PIN_LAYOUT
 from .model import PinKingModel
 from .ui import PinKingUI
@@ -50,14 +51,13 @@ def main(fake_gpio, rev):
     click.echo('Using GPIO: {}'.format(GPIO))
     click.echo('Model [{}]: {[TYPE]}'.format(rev, GPIO.RPI_INFO))
 
-    if not rev in PIN_LAYOUT:
-        click.echo('I don\'t know the pin layout for {}. Sorry.\n'
-                   'Please report this issue to {}'
-                   .format(rev, HOME_URL))
+    try:
+        # instantiate model
+        model = PinKingModel(GPIO, PIN_LAYOUT[rev])
+    except LayoutNotFoundError as e:
+        click.echo('No pin layout known for {}.\n'
+                   'Please report this issue to {}'.format(e, HOME_URL))
         sys.exit(1)
-
-    # instantiate model
-    model = PinKingModel(GPIO, PIN_LAYOUT[rev])
 
     try:
         curses.wrapper(PinKingUI.create_and_run, model)
