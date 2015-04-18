@@ -13,15 +13,6 @@ import threading
 log = logging.getLogger()
 
 
-# the "Fake GPIO" module
-class FakeGPIO(object):
-    BOARD = None
-    IN = -1
-    OUT = 1
-    LOW = 0
-    HIGH = 1
-
-
 def get_cpu_revision():
     for line in open('/proc/cpuinfo').readlines():
         if line.startswith('Revision'):

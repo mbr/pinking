@@ -14,6 +14,12 @@ class FakeGPIO(object):
         'MANUFACTURER': 'FakeGPIO'
     }
 
+    BOARD = None
+    IN = -1
+    OUT = 1
+    LOW = 0
+    HIGH = 1
+
     def __getattr__(self, name):
         def f(*args, **kwargs):
             parts = [str(a) for a in args]
