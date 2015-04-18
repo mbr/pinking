@@ -3,7 +3,7 @@
 
 import os
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def read(fname):
@@ -21,6 +21,7 @@ setup(
     url='http://github.com/mbr/pinking',
     license='MIT',
     install_requires=['click', 'logbook', 'contextlib2', 'blinker'],
+    packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
             'pinking = pinking.cli:main',
