@@ -1,5 +1,6 @@
 import curses
 
+from blinker import Signal
 from logbook import Logger
 
 from .exc import LayoutNotFoundError
@@ -37,6 +38,8 @@ PIN_LAYOUT = {
         'GND',         'GPIO21',
     ]
 }
+RESERVED_PINS = ('GND', '5V', '3V3', 'ID_SC', 'ID_SD')
+
 
 # China RasPi 2 == UK Raspi 2
 PIN_LAYOUT['a21041'] = PIN_LAYOUT['a01041']
@@ -45,20 +48,13 @@ PIN_LAYOUT['a21041'] = PIN_LAYOUT['a01041']
 log = Logger('model')
 
 
-class Observable(object):
-    def __init__(self):
-        self.observers = []
-
-    def register_observer(self, callback):
-        self.observers.append(callback)
-
-    def notify(self):
-        for obs in self.observers:
-            obs()
-
-
-class PinKingModel(Observable):
-    RESERVED_PINS = ('GND', '5V', '3V3', 'ID_SC', 'ID_SD')
+class PinKingModel(object):
+    # signals
+    pin_selected = Signal(doc='The currently selected ``pin`` changed.')
+    direction_changed = Signal(doc='``pin`` changed its input/output '
+                                   'direction to ``direction``')
+    in_values_changed = Signal(doc='``in_values`` changed')
+    out_values_changed = Signal(doc='``out_values`` changed')
 
     def __init__(self, gpio, rev):
         super(PinKingModel, self).__init__()
@@ -74,45 +70,30 @@ class PinKingModel(Observable):
         self.in_values = [0] * len(self.layout)
         self.gpio = gpio
 
-        # set GPIO mode
+        # set GPIO mode to board numbering
         self.gpio.setmode(self.gpio.BOARD)
 
-        self.reset_channels()
+        # set all pins to input
+        for n in xrange(len(self.layout)):
+            self.set_direction(n, self.gpio.IN)
 
-    def _on_edge_detect(self, channel):
+        # read initial set of input values
+        self.read_input_values()
+
+    def set_direction(self, pin, direction):
         GPIO = self.gpio
 
-        pin = channel - 1
-        log.debug('Edge detected on {}'.format(channel))
-
-        nv = GPIO.input(channel)
-        if nv != self.in_values[pin]:
-            self.in_values[pin] = nv
-            self.notify()
-
-    def set_direction(self, pin, d):
-        GPIO = self.gpio
-
-        channel = pin + 1
-
-        name = self.layout[pin]
-
-        if name in self.RESERVED_PINS:
+        if self.layout[pin] in RESERVED_PINS:
             self.directions[pin] = None
-            return  # ignore ground
-        self.directions[pin] = d
+            return
 
-        GPIO.setup(channel, d, pull_up_down=GPIO.PUD_DOWN)
+        prev_direction = self.directions[pin]
+        self.directions[pin] = direction
 
-        if d == GPIO.IN:
-            GPIO.add_event_detect(channel, GPIO.BOTH, self._on_edge_detect)
-        else:
-            # remove previously installed event handler
-            GPIO.remove_event_detect(channel)
+        GPIO.setup(pin + 1, direction, pull_up_down=self.gpio.PUD_DOWN)
 
-        log.debug('Setting pin direction: {} #{} {}'.format(
-            'in' if d == GPIO.IN else 'out', pin, self.layout[pin],
-        ))
+        if prev_direction != direction:
+            self.direction_changed.send(self, pin=pin, direction=direction)
 
     def set_output_value(self, pin, value):
         self.out_values[pin] = value
@@ -120,75 +101,69 @@ class PinKingModel(Observable):
         log.debug('Setting output: {} #{} {}'.format(
             value, pin, self.layout[pin],
         ))
-        self.gpio.output(channel, value)
-
-        self.notify()
+        self.gpio.output(pin + 1, value)
 
     def read_input_values(self):
-        GPIO = self.gpio
-        changed = False
+        values = []
 
-        for pin, d in enumerate(self.directions):
-            if d == GPIO.IN:
-                nv = GPIO.input(pin + 1)
-                if nv != self.in_values[pin]:
-                    self.in_values[pin] = nv
-                    changed = True
+        IN = self.gpio.IN
+        input = self.gpio.input
 
-        if changed:
-            self.notify()
-
-    def reset_channels(self):
-        for n, name in enumerate(self.layout):
-            self.set_direction(n, self.gpio.IN)
-
-        self.read_input_values()
-
-    def handle_keypress(self, keycode):
-        # controller code, tacked onto model. sorry
-        if keycode == ord('j') or keycode == curses.KEY_DOWN:
-            self.selected_pin += 2
-            self.selected_pin %= len(self.layout)
-            self.notify()
-            return True
-        if keycode == ord('k') or keycode == curses.KEY_UP:
-            self.selected_pin -= 2
-            self.selected_pin %= len(self.layout)
-            self.notify()
-            return True
-        if keycode == ord('h') or keycode == curses.KEY_LEFT:
-            if self.selected_pin % 2:
-                self.selected_pin -= 1
-                self.selected_pin %= len(self.layout)
-                self.notify()
-            return True
-        if keycode == ord(';') or keycode == curses.KEY_RIGHT:
-            if not self.selected_pin % 2:
-                self.selected_pin += 1
-                self.selected_pin %= len(self.layout)
-                self.notify()
-            return True
-        if keycode == ord('d'):
-            old_dir = self.directions[self.selected_pin]
-            if old_dir is not None:
-                self.set_direction(
-                    self.selected_pin,
-                    GPIO.IN if old_dir == GPIO.OUT else GPIO.OUT
-                )
-                self.notify()
+        for pin, direction in enumerate(self.directions):
+            if direction == IN:
+                values.append(input(pin + 1))
             else:
-                curses.flash()
-            return True
-        if keycode == ord('t') or keycode == ord('\n'):
-            if self.directions[self.selected_pin] == GPIO.OUT:
-                self.set_output_value(
-                    self.selected_pin,
-                    GPIO.LOW if self.out_values[self.selected_pin] ==
-                    GPIO.HIGH else GPIO.HIGH
-                )
-            return True
-        if keycode == ord('r'):
-            self.read_input_values()
-            log.info(''.join(map(str, self.in_values)))
-            return True
+                values.append(None)
+
+        if values != self.in_values:
+            self.in_values = values
+            self.in_values_changed.send(self, in_values=values)
+
+    # def handle_keypress(self, keycode):
+    #     # controller code, tacked onto model. sorry
+    #     if keycode == ord('j') or keycode == curses.KEY_DOWN:
+    #         self.selected_pin += 2
+    #         self.selected_pin %= len(self.layout)
+    #         self.notify()
+    #         return True
+    #     if keycode == ord('k') or keycode == curses.KEY_UP:
+    #         self.selected_pin -= 2
+    #         self.selected_pin %= len(self.layout)
+    #         self.notify()
+    #         return True
+    #     if keycode == ord('h') or keycode == curses.KEY_LEFT:
+    #         if self.selected_pin % 2:
+    #             self.selected_pin -= 1
+    #             self.selected_pin %= len(self.layout)
+    #             self.notify()
+    #         return True
+    #     if keycode == ord(';') or keycode == curses.KEY_RIGHT:
+    #         if not self.selected_pin % 2:
+    #             self.selected_pin += 1
+    #             self.selected_pin %= len(self.layout)
+    #             self.notify()
+    #         return True
+    #     if keycode == ord('d'):
+    #         old_dir = self.directions[self.selected_pin]
+    #         if old_dir is not None:
+    #             self.set_direction(
+    #                 self.selected_pin,
+    #                 GPIO.IN if old_dir == GPIO.OUT else GPIO.OUT
+    #             )
+    #             self.notify()
+    #         else:
+    #             curses.flash()
+    #         return True
+    #     if keycode == ord('t') or keycode == ord('\n'):
+    #         if self.directions[self.selected_pin] == GPIO.OUT:
+    #             self.set_output_value(
+    #                 self.selected_pin,
+    #                 GPIO.LOW if self.out_values[self.selected_pin] ==
+    #                 GPIO.HIGH else GPIO.HIGH
+    #             )
+    #         return True
+    #     if keycode == ord('r'):
+    #         self.read_input_values()
+    #         log.info(''.join(map(str, self.in_values)))
+    #         return True
 
