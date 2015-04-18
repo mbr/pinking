@@ -20,7 +20,8 @@ setup(
     author_email='git@marcbrinkmann.de',
     url='http://github.com/mbr/pinking',
     license='MIT',
-    install_requires=['click', 'logbook', 'contextlib2', 'blinker'],
+    install_requires=['click', 'logbook', 'contextlib2', 'blinker',
+                      'RPi.GPIO'],
     packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
