@@ -1,22 +1,7 @@
 #!/usr/bin/env python
 
 import curses
-from importlib import import_module
 import logging
-import platform
-from Queue import Queue
-import subprocess
-import sys
-import threading
-
-
-log = logging.getLogger()
-
-
-def get_cpu_revision():
-    for line in open('/proc/cpuinfo').readlines():
-        if line.startswith('Revision'):
-            return line[line.rfind(':') + 2:].strip()
 
 
 class LogWindow(logging.Handler):
