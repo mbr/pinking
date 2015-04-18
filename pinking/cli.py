@@ -43,6 +43,35 @@ def load_gpio(fake_gpio):
     return GPIO
 
 
+def run_gpio_test(model):
+    poll_rate = 10.0
+    click.echo('{} Hz'.format(poll_rate))
+
+    def _on_iv_change(model, values):
+        click.echo('IN: {}'.format(''.join(map(str, values))))
+
+    def _on_ov_change(model, values):
+        click.echo('OUT: {}'.format(''.join(map(str, values))))
+
+    def _on_d_change(model, pin, direction):
+        click.echo('#{} changed to {}'.format(
+            pin + 1,
+            'IN' if direction == model.gpio.IN else 'OUT',
+        ))
+
+    model.in_values_changed.connect(_on_iv_change)
+    model.out_values_changed.connect(_on_ov_change)
+    model.direction_changed.connect(_on_d_change)
+
+    # last 2 gpio pins are set to output
+    out_pins = [p for p, n in enumerate(model.layout)
+                if n.startswith('GPIO')][-2:]
+
+    for pin in out_pins:
+        model.set_direction(pin, model.gpio.OUT)
+        model.set_output_value(pin, model.gpio.HIGH)
+
+
 @click.command()
 @click.option('--fake-gpio', '-G', is_flag=True,
               help='Do not use GPIO library, fake input instead.')
@@ -68,8 +97,8 @@ def main(fake_gpio, rev, test):
         sys.exit(1)
 
     if test:
-        click.echo('Running model test.')
-        pass
+        click.echo('GPIO test mode.')
+        run_gpio_test(model)
         sys.exit(0)
 
     with curses_wrap() as stdscr, ExitStack() as cleanup:

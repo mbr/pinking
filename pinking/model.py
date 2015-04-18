@@ -53,8 +53,8 @@ class PinKingModel(object):
     pin_selected = Signal(doc='The currently selected ``pin`` changed.')
     direction_changed = Signal(doc='``pin`` changed its input/output '
                                    'direction to ``direction``')
-    in_values_changed = Signal(doc='``in_values`` changed')
-    out_values_changed = Signal(doc='``out_values`` changed')
+    in_values_changed = Signal(doc='``values`` changed')
+    out_values_changed = Signal(doc='``values`` changed')
 
     def __init__(self, gpio, rev):
         super(PinKingModel, self).__init__()
@@ -96,12 +96,12 @@ class PinKingModel(object):
             self.direction_changed.send(self, pin=pin, direction=direction)
 
     def set_output_value(self, pin, value):
+        prev_value = self.out_values[pin]
         self.out_values[pin] = value
-
-        log.debug('Setting output: {} #{} {}'.format(
-            value, pin, self.layout[pin],
-        ))
         self.gpio.output(pin + 1, value)
+
+        if prev_value != value:
+            self.out_values_changed.send(self, values=self.out_values)
 
     def read_input_values(self):
         values = []
