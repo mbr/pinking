@@ -20,7 +20,7 @@ setup(
     author_email='git@marcbrinkmann.de',
     url='http://github.com/mbr/pinking',
     license='MIT',
-    install_requires=['click', 'logbook'],
+    install_requires=['click', 'logbook', 'contextlib2'],
     entry_points={
         'console_scripts': [
             'pinking = pinking.cli:main',

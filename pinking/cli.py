@@ -1,4 +1,4 @@
-import curses
+from contextlib2 import ExitStack
 import sys
 
 import click
@@ -7,6 +7,7 @@ from .exc import LayoutNotFoundError
 from .lib import PIN_LAYOUT
 from .model import PinKingModel
 from .ui import PinKingUI
+from .util import curses_wrap
 
 
 HOME_URL = 'https://github.com/mbr/pinking'
@@ -59,7 +60,8 @@ def main(fake_gpio, rev):
                    'Please report this issue to {}'.format(e, HOME_URL))
         sys.exit(1)
 
-    try:
-        curses.wrapper(PinKingUI.create_and_run, model)
-    finally:
-        GPIO.cleanup()
+    with curses_wrap() as stdscr, ExitStack() as cleanup:
+        cleanup.callback(GPIO.cleanup)  # once we're done, reset GPIO pins
+
+        ui = PinKingUI(stdscr, model)
+        ui.run()
