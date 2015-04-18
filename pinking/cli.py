@@ -49,7 +49,9 @@ def load_gpio(fake_gpio):
               help='Do not use GPIO library, fake input instead.')
 @click.option('--rev', '-r',
               help='Manually specify hardware revision.')
-def main(fake_gpio, rev):
+@click.option('--test', '-t', is_flag=True,
+              help='Run model test.')
+def main(fake_gpio, rev, test):
     gpio = load_gpio(fake_gpio)
 
     if rev is None:
@@ -65,6 +67,11 @@ def main(fake_gpio, rev):
         click.echo('No pin layout known for {}.\n'
                    'Please report this issue to {}'.format(e, HOME_URL))
         sys.exit(1)
+
+    if test:
+        click.echo('Running model test.')
+        pass
+        sys.exit(0)
 
     with curses_wrap() as stdscr, ExitStack() as cleanup:
         cleanup.callback(gpio.cleanup)  # once we're done, reset GPIO pins
