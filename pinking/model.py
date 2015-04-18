@@ -69,9 +69,9 @@ class PinKingModel(Observable):
             raise LayoutNotFoundError(e)
 
         self.selected_pin = 0
-        self.directions = [None] * len(layout)
-        self.out_values = [0] * len(layout)
-        self.in_values = [0] * len(layout)
+        self.directions = [None] * len(self.layout)
+        self.out_values = [0] * len(self.layout)
+        self.in_values = [0] * len(self.layout)
         self.gpio = gpio
 
         # set GPIO mode
