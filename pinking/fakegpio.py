@@ -15,12 +15,12 @@ class FakeGPIO(object):
     }
 
     def __getattr__(self, name):
-        def f(*args):
-            log.debug('FakeGPIO: {}({})'.format(name, ', '.join(
-                map(str, args)))
-            )
+        def f(*args, **kwargs):
+            parts = [str(a) for a in args]
+            parts.extend('{}={}'.format(k, str(v)) for k, v in
+                         kwargs.iteritems())
+            log.debug('FakeGPIO: {}({})'.format(name, ', '.join(parts)))
         return f
-
 
 
 GPIO = FakeGPIO()
