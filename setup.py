@@ -21,7 +21,7 @@ setup(
     url='http://github.com/mbr/pinking',
     license='MIT',
     install_requires=['click', 'logbook', 'contextlib2', 'blinker',
-                      'RPi.GPIO'],
+                      'RPi.GPIO', 'urwid'],
     packages=find_packages(exclude=['tests']),
     entry_points={
         'console_scripts': [
