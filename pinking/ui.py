@@ -3,6 +3,7 @@ import threading
 from Queue import Queue
 import sys
 
+from blinker import Signal
 from logbook import Logger
 
 
@@ -10,6 +11,54 @@ log = Logger('ui')
 
 
 class AppController(object):
+    # def handle_keypress(self, keycode):
+    #     # controller code, tacked onto model. sorry
+    #     if keycode == ord('j') or keycode == curses.KEY_DOWN:
+    #         self.selected_pin += 2
+    #         self.selected_pin %= len(self.layout)
+    #         self.notify()
+    #         return True
+    #     if keycode == ord('k') or keycode == curses.KEY_UP:
+    #         self.selected_pin -= 2
+    #         self.selected_pin %= len(self.layout)
+    #         self.notify()
+    #         return True
+    #     if keycode == ord('h') or keycode == curses.KEY_LEFT:
+    #         if self.selected_pin % 2:
+    #             self.selected_pin -= 1
+    #             self.selected_pin %= len(self.layout)
+    #             self.notify()
+    #         return True
+    #     if keycode == ord(';') or keycode == curses.KEY_RIGHT:
+    #         if not self.selected_pin % 2:
+    #             self.selected_pin += 1
+    #             self.selected_pin %= len(self.layout)
+    #             self.notify()
+    #         return True
+    #     if keycode == ord('d'):
+    #         old_dir = self.directions[self.selected_pin]
+    #         if old_dir is not None:
+    #             self.set_direction(
+    #                 self.selected_pin,
+    #                 GPIO.IN if old_dir == GPIO.OUT else GPIO.OUT
+    #             )
+    #             self.notify()
+    #         else:
+    #             curses.flash()
+    #         return True
+    #     if keycode == ord('t') or keycode == ord('\n'):
+    #         if self.directions[self.selected_pin] == GPIO.OUT:
+    #             self.set_output_value(
+    #                 self.selected_pin,
+    #                 GPIO.LOW if self.out_values[self.selected_pin] ==
+    #                 GPIO.HIGH else GPIO.HIGH
+    #             )
+    #         return True
+    #     if keycode == ord('r'):
+    #         self.read_input_values()
+    #         log.info(''.join(map(str, self.in_values)))
+    #         return True
+
     def handle_keypress(self, keycode):
         if keycode == ord('q'):
             sys.exit(0)
@@ -119,6 +168,8 @@ class PinWindow(Widget):
 
 
 class PinKingUI(Widget):
+    keypress = Signal(doc='Key with ``keycode`` was pressed')
+
     def __init__(self, scr, model):
         super(PinKingUI, self).__init__()
 
@@ -145,40 +196,36 @@ class PinKingUI(Widget):
         curses.init_pair(6, curses.COLOR_CYAN, -1)
         curses.init_pair(7, curses.COLOR_WHITE, -1)
 
-        self.ctrls = [
-            AppController(),
-            self.model,
-        ]
-
         # instantiate ui windows
-        PinWindow.from_model(pm)
+        # PinWindow.from_model(pm)
 
         # add logging window
-        LogWindow(curses.newwin(self.height - pw.height - 1,
-                                self.width,
-                                pw.height + 1,
-                                0))
+        # LogWindow(curses.newwin(self.height - pw.height - 1,
+        #                         self.width,
+        #                         pw.height + 1,
+        #                         0))
 
     def run(self):
-        log.debug('Starting event loop...')
+        log.debug('Starting GUI event loop...')
 
         while True:
-            # redraw all widgets that need redrawing
+            # redraw all widgets that need redrawing in the gui thread
             for widget in self.widgets:
-                widget.redraw()
+                if widget.needs_redraw:
+                    widget.redraw()
 
-            # get next event
-            ev = self.events.get()
+            event_count = 0
+            for i in xrange(100):  # every 100 events, we check for gui updates
+                                   # or once we handled all of
+            while not self.events.empty():
+                event
+                # get next event
+                ev = self.events.get()
 
-            if 'keypress' == ev[0]:
-                keycode = ev[1]
-
-                # let any controller handle the keypress
-                for c in self.ctrls:
-                    if c.handle_keypress(keycode):
-                        continue
-            else:
-                raise RuntimeError('Received unexpected event {}'.format(ev))
+                if 'keypress' == ev[0]:
+                    self.keypress.send(self, ev[1])
+                else:
+                    raise RuntimeError('Received unexpected event {}'.format(ev))
 
     def _read_keypress(self):
         scr, q = self.scr, self.events
@@ -188,7 +235,3 @@ class PinKingUI(Widget):
 
             if ch is not -1:
                 q.put(('keypress', ch))
-
-    @classmethod
-    def create_and_run(cls, *args, **kwargs):
-        return cls(*args, **kwargs).run()
